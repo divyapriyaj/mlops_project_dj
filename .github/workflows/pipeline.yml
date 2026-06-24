@@ -1,0 +1,112 @@
+name: Tourism Wellness App CI/CD Pipeline 
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+# -----------------------------
+# 1. DATASET REGISTRATION
+# -----------------------------
+  register-dataset:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install huggingface_hub
+
+      - name: Upload Dataset to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/register_dataset.py
+
+
+# -----------------------------
+# 2. DATA PREPARATION
+# -----------------------------
+  data-prep:
+    needs: register-dataset
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Data Preparation
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/data_preparation.py
+
+
+# -----------------------------
+# 3. MODEL TRAINING
+# -----------------------------
+  model-training:
+    needs: data-prep
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mlflow
+
+      - name: Start MLflow Server
+        run: |
+          nohup mlflow ui --host 0.0.0.0 --port 5000 &
+          sleep 5
+
+      - name: Train Model
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/train_model.py
+
+
+# -----------------------------
+# 4. DEPLOYMENT TO HUGGING FACE SPACE
+# -----------------------------
+  deploy-hosting:
+    needs: [register-dataset, data-prep, model-training]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface_hub
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "github-actions"
+
+          git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
+
+          cp -r . hf-space
+          cd hf-space
+
+          git add .
+          git commit -m "Auto deploy from GitHub Actions" || echo "No changes to commit"
+
+          git push https://Priya14Divya:${HF_TOKEN}@huggingface.co/spaces/Priya14Divya/tourism-wellness-app main
