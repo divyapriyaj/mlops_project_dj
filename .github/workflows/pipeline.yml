@@ -82,31 +82,24 @@ jobs:
 # -----------------------------
 # 4. DEPLOYMENT TO HUGGING FACE SPACE
 # -----------------------------
-  deploy-hosting:
-    needs: [register-dataset, data-prep, model-training]
-    runs-on: ubuntu-latest
+  - name: Deploy to Hugging Face Space
+  env:
+    HF_TOKEN: ${{ secrets.HF_TOKEN }}
+  run: |
+    git config --global user.email "github-actions@users.noreply.github.com"
+    git config --global user.name "github-actions"
 
-    steps:
-      - uses: actions/checkout@v3
+    git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install huggingface_hub
+    # Remove existing contents in hf-space
+    rm -rf hf-space/*
 
-      - name: Deploy to Hugging Face Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git config --global user.email "github-actions@users.noreply.github.com"
-          git config --global user.name "github-actions"
+    # Copy everything except hf-space folder
+    cp -r $(ls -A | grep -v hf-space) hf-space/
 
-          git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
+    cd hf-space
 
-          cp -r . hf-space
-          cd hf-space
+    git add .
+    git commit -m "Auto deploy from GitHub Actions" || echo "No changes to commit"
 
-          git add .
-          git commit -m "Auto deploy from GitHub Actions" || echo "No changes to commit"
-
-          git push https://Priya14Divya:${HF_TOKEN}@huggingface.co/spaces/Priya14Divya/tourism-wellness-app main
+    git push https://Priya14Divya:${HF_TOKEN}@huggingface.co/spaces/Priya14Divya/tourism-wellness-app main
