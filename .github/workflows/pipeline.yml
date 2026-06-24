@@ -1,4 +1,4 @@
-name: Tourism Wellness App CI/CD Pipeline 
+name: Tourism Wellness App CI/CD Pipeline
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -82,24 +82,29 @@ jobs:
 # -----------------------------
 # 4. DEPLOYMENT TO HUGGING FACE SPACE
 # -----------------------------
-  - name: Deploy to Hugging Face Space
-  env:
-    HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  run: |
-    git config --global user.email "github-actions@users.noreply.github.com"
-    git config --global user.name "github-actions"
+  deploy-hosting:
+    needs: [register-dataset, data-prep, model-training]
+    runs-on: ubuntu-latest
 
-    git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
+    steps:
+      - uses: actions/checkout@v4
 
-    # Remove existing contents in hf-space
-    rm -rf hf-space/*
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "github-actions"
 
-    # Copy everything except hf-space folder
-    cp -r $(ls -A | grep -v hf-space) hf-space/
+          git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
 
-    cd hf-space
+          rm -rf hf-space/*
 
-    git add .
-    git commit -m "Auto deploy from GitHub Actions" || echo "No changes to commit"
+          cp -r ./* hf-space/
 
-    git push https://Priya14Divya:${HF_TOKEN}@huggingface.co/spaces/Priya14Divya/tourism-wellness-app main
+          cd hf-space
+
+          git add .
+          git commit -m "Auto deploy from GitHub Actions" || echo "No changes to commit"
+
+          git push https://Priya14Divya:${HF_TOKEN}@huggingface.co/spaces/Priya14Divya/tourism-wellness-app main
