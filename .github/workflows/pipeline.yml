@@ -98,9 +98,11 @@ jobs:
 
           git clone https://huggingface.co/spaces/Priya14Divya/tourism-wellness-app hf-space
 
+          # Clean target repo safely
           rm -rf hf-space/*
 
-          cp -r ./* hf-space/
+          # Copy everything EXCEPT hf-space itself
+          rsync -av --exclude='hf-space' ./ hf-space/
 
           cd hf-space
 
